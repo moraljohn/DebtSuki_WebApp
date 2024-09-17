@@ -1,0 +1,228 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Summary of Debts
+{% endblock %}
+
+
+{% block main %}
+    {% if table_data %}
+        <div class="summary-features">
+            <button id="createTableBtn" class="btn btn-primary">Create Table</button>
+            <form action="/summary" method="post">
+                <div class="summary-row">
+                    <div class="summary-col">
+                        <select name="table-name" class="form-select w-auto" required>
+                            <option disabled value="">List of tables</option>
+                            {% for table in tables %}
+                                <option value="{{ table.table_name }}" {% if table.table_name == selected_table %}selected{% endif %}>{{ table.table_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="summary-col">
+                        <button class="btn btn-primary ml-3">View</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="container d-flex justify-content-between mt-5 mb-2">
+            <h2>Table name: <span class="badge text-bg-secondary">{{ selected_table }}</span></h2>
+            <div class="d-flex">
+                <form id="debtForm" action="/addRow" method="post">
+                    <button id="saveNewRowBtn" class="btn btn-success w-auto" type="submit" style="margin-right:10px;display:none">Save</button>
+                </form>
+                <button class="btn btn-success w-auto" type="button" onclick="tableNewRow()">Add Row</button>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th scope="col">Name</th>
+                        <th scope="col">Remaining Gross</th>
+                        <th scope="col">Interest (%)</th>
+                        <th scope="col">Payment</th>
+                        <th scope="col">Date Created</th>
+                        <th scope="col">Due Date</th>
+                        <th scope="col">Total Gross</th>
+                        <th scope="col">Total Interest</th>
+                        <th scope="col">Paid</th>
+                        <th scope="col">Total</th>
+                    </tr>
+                </thead>
+                <tbody id="tableAddRow" data-table-name="{{ selected_table }}">
+                    {% for table in table_data %}
+                        <tr onclick="showBtnRow('{{ table.id }}')" class="{% if int(table.total_amount) == 0 %}table-success{% endif %}" style="cursor: pointer;">
+                            <td><a href="/history/{{ table.id }}/{{ table.name }}/{{ table.table_name }}" style="text-decoration:none;font-weight:bold;text-transform:capitalize;color:black;">{{ table.name }}</a></td>
+                            <td>{{ php(table.gross) }}</td>
+                            <td>{% if table.interest is not none and table.interest != '' %}{{ table.interest | float | int }}%{% else %}  {% endif %}</td>
+                            <td>{{ table.payment }}</td>
+                            <td>{{ table.date }}</td>
+                            <td>{{ table.due_date }}</td>
+                            <td>{{ php(table.total_gross) }}</td>
+                            <td>{{ php(table.total_interest) }}</td>
+                            <td>{% if table.amount_paid %}{{ php(table.amount_paid) }}{% else %} {% endif %}</td>
+                            <td>{{ php(table.total_amount) }}</td>
+                        </tr>
+                        <tr id="showBtnRow{{ table.id }}" style="display:none;">
+                            <td colspan="2"><button class="btn btn-info" onclick="editRow('{{ table.id }}')" type="button">Edit</button></td>
+                            <td colspan="2"><button class="btn btn-info" onclick="addInterestRow('{{ table.id }}')" type="button">Add Interest</button></td>
+                            <td colspan="2"><button class="btn btn-info" onclick="addPartial('{{ table.id }}')" type="button">Partial Payment</button></td>
+                            <td colspan="2"><button class="btn btn-info" onclick="addDebt('{{ table.id }}')" type="button">New Debt</button></td>
+                            <!-- <td colspan="2"><a class="btn btn-danger" href="/delete/{{ table.id }}/{{ table.user_id }}/{{ table.name }}" id="deleteBtn" type="button">Delete</button></td> -->
+                            <td><button class="btn btn-success" onclick="paidRow('{{ table.id }}', '{{ table.name }}', '{{ table.table_name }}')" type="button">Paid</button></td>
+                            <td><button class="btn btn-danger" onclick="deleteRow('{{ table.id }}', '{{ table.name }}', '{{ table.table_name }}')" type="button">Delete</button></td>
+                        </tr>
+                        <tr id="editRow{{ table.id }}" class="table-active row-hide" style="display:none;">
+                            <form id="editRowForm{{ table.id }}" action="/edit" method="post">
+                                <input name="id" type="hidden" value="{{ table.id }}">
+                                <input name="table-name" type="hidden" value="{{ table.table_name }}">
+                                <input name="created-date" type="hidden" value="{{ table.date }}">
+                                <td><input autocomplete="off" autofocus class="form-control text-center" name="edit-name" placeholder="Name" type="text" value="{{ table.name }}" required></td>
+                                <td><input autocomplete="off" class="form-control text-center" name="edit-gross" placeholder="Gross" value="{{ table.gross }}" type="number" required></td>
+                                <td><input autocomplete="off" class="form-control text-center" name="edit-interest" placeholder="Interest" value="{{ table.interest }}" type="number" {% if table.interest %}required{% endif %}></td>
+                                <td>
+                                    <select name="edit-payment" class="form-select text-center" required>
+                                        <option disabled value="">Payment Method</option>
+                                        {% for payment in payments %}
+                                            <option value="{{ payment }}" {% if payment == table.payment %}selected{% endif %}>{{ payment }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td><input class="form-control text-center" name="edit-date" type="text" value="{{ table.date }}" disabled required></td>
+                                <td><input class="form-control text-center" name="edit-due-date" type="date" value="{{ table.due_date }}" required></td>
+                                <td><input class="form-control text-center" name="edit-total-gross" type="number" value="{{ table.total_gross }}" required></td>
+                                <td><input class="form-control text-center" name="edit-total-interest" type="number" value="{{ table.total_interest }}" required></td>
+                                <td><input class="form-control text-center" name="edit-amound-paid" type="text" placeholder="Amount Paid" value="{% if table.amount_paid %}{{ table.amount_paid }}{% else %} {% endif %}" disabled></td>
+                                <td><input class="form-control text-center" name="edit-total" type="number" value="{{ table.total_amount }}" disabled required></td>
+                            </form>
+                        </tr>
+                        <tr id="addInterestRow{{ table.id }}" class="table-active row-hide" style="display:none;">
+                            <form id="addInterestForm{{ table.id }}" action="/addInterest" method="post">
+                                <input name="id" type="hidden" value="{{ table.id }}">
+                                <input name="table-name" type="hidden" value="{{ table.table_name }}">
+                                <input name="total_amount" type="hidden" value="{{ table.total_amount }}">
+                                <input name="debtor_name" type="hidden" value="{{ table.name }}">
+                                <input name="debtor_gross" type="hidden" value="{{ table.gross }}">
+                                <input name="debtor_payment" type="hidden" value="{{ table.payment }}">
+                                <td><input autocomplete="off" class="form-control text-center" name="name" placeholder="Name" type="text" value="{{ table.name }}" disabled></td>
+                                <td><input autocomplete="off" class="form-control text-center" name="gross" placeholder="Gross" type="number" value="{{ table.gross }}" disabled></td>
+                                <th scope="row">Interest (%)<input autocomplete="off" autofocus class="form-control text-center" name="add-interest" placeholder="Add Interest" type="number" value="{{ table.interest }}" required></th>
+                                <td>
+                                    <select name="payment" class="form-select text-center" disabled>
+                                        <option disabled value="">Payment Method</option>
+                                        {% for payment in payments %}
+                                            <option value="{{ payment }}" {%if payment == table.payment %}selected{% endif %}>{{ payment }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td><input class="form-control text-center" name="date" type="text" value="{{ table.date }}" disabled></td>
+                                <th scope="row">Due Date<input class="form-control text-center" name="due-date" type="date"></th>
+                                <td><input class="form-control text-center" name="total_gross" placeholder="Total Gross" type="number" value="{{ table.total_gross }}" disabled></td>
+                                <td><input class="form-control text-center" name="total_interest" placeholder="Total Interest" type="number" value="{{ table.total_interest }}" disabled></td>
+                                <td><input class="form-control text-center" name="amount_paid" placeholder="Amount Paid" type="text" value="{% if table.amount_paid %}{{ table.amount_paid }}{% else %}  {% endif %}" disabled></td>
+                                <td><input class="form-control text-center" name="total" type="number" value="{{ table.total_amount }}" disabled></td>
+                                <!-- <td><button class="btn btn-success" type="submit">Save</button></td> -->
+                            </form>
+                        </tr>
+                        <tr id="addPartial{{ table.id }}" class="table-active row-hide" style="display:none">
+                            <form id="addPartialForm{{ table.id }}" action="/addPartial" method="post">
+                                <input name="id" type="hidden" value="{{ table.id }}">
+                                <input name="table-name" type="hidden" value="{{ table.table_name }}">
+                                <input name="debtor_name" type="hidden" value="{{ table.name }}">
+                                <input name="debtor_interest" type="hidden" value="{{ table.interest }}">
+                                <input name="debtor_gross" type="hidden" value="{{ table.gross }}">
+                                <input name="total_amount" type="hidden" value="{{ table.total_amount }}">
+                                <input autocomplete="off" class="form-control text-center" name="name" placeholder="Name" type="hidden" value="{{ table.name }}" disabled>
+                                <input autocomplete="off" class="form-control text-center" name="gross" placeholder="Gross" type="hidden" value="{{ table.gross }}" disabled>
+                                <th scope="row" colspan="2">Payment Amount<input class="form-control text-center" name="payment-amount" placeholder="Payment Amount" type="number" required></th>
+                                <th scope="row" colspan="2">Interest (%)<input autocomplete="off" autofocus class="form-control text-center" name="interest" placeholder="Interest (Optional)" type="number"></th>
+                                <th scope="row" colspan="2">Payment Method
+                                    <select name="payment" class="form-select text-center" required>
+                                        <option disabled value="">Payment Method</option>
+                                        {% for payment in payments %}
+                                            <option value="{{ payment }}" {%if payment == table.payment %}selected{% endif %}>{{ payment }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </th>
+                                <th scope="row" colspan="2">Due Date<input class="form-control text-center" name="due-date" type="date" required></th>
+                                <th scope="row" colspan="2">Payment Date<input class="form-control text-center" name="last-payment-date" type="date" required></th>
+                                <!-- <td><button class="btn btn-success" type="submit">Save</button></td> -->
+                            </form>
+                        </tr>
+                        <tr id="addDebt{{ table.id }}" class="table-active row-hide" style="display:none;">
+                            <form id="addDebtForm{{ table.id }}" action="/addDebt" method="post">
+                                <input name="id" type="hidden" value="{{ table.id }}">
+                                <input name="table-name" type="hidden" value="{{ table.table_name }}">
+                                <input name="debtor_name" type="hidden" value="{{ table.name }}">
+                                <input name="total_amount" type="hidden" value="{{ table.total_amount }}">
+                                <input name="total_gross" type="hidden" value="{{ table.total_gross }}">
+                                <input name="total_interest" type="hidden" value="{{ table.total_interest }}">
+                                <td colspan="2"><input autocomplete="off" autofocus class="form-control text-center" name="edit-name" placeholder="Name" type="text" value="{{ table.name }}" disabled></td>
+                                <th scope="row" colspan="2">Gross<input autocomplete="off" class="form-control text-center" name="gross" placeholder="Gross" type="number" required></th>
+                                <th scope="row" colspan="2">Interest (%)<input autocomplete="off" autofocus class="form-control text-center" name="interest" placeholder="Interest" type="number" required></th>
+                                <th scope="row" colspan="2">Payment Method
+                                    <select name="payment" class="form-select text-center" required>
+                                        <option disabled value="">Payment Method</option>
+                                        {% for payment in payments %}
+                                            <option value="{{ payment }}" {%if payment == table.payment %}selected{% endif %}>{{ payment }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </th>
+                                <th scope="row" colspan="2">Due Date<input class="form-control text-center" name="due-date" type="date" required></th>
+                                <!-- <td><button class="btn btn-success" type="submit">Save</button></td> -->
+                            </form>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="8"></td>
+                        <th scope="row">INTEREST</th>
+                        <th scope="row">{{ php(total_interest) }}</th>
+                    </tr>
+                    <tr>
+                        <td colspan="8"></td>
+                        <th scope="row">GROSS</th>
+                        <th scope="row">{{ php(total_gross) }}</th>
+                    </tr>
+                    <tr>
+                        <td colspan="8"></td>
+                        <th scope="row">AMOUNT PAID</th>
+                        <th scope="row" style="color:red;font-weight:bold;">-{{ php(paid) }}</th>
+                    </tr>
+                    <tr>
+                        <td colspan="8"></td>
+                        <th scope="row">TOTAL</th>
+                        <th scope=row>{{ php(total) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <button id="row" class="btn btn-success w-25" type="submit" style="margin-left:auto;margin-right:auto;display:none;">Save</button>
+        <button id="interest" class="btn btn-success w-25" type="submit" style="margin-left:auto;margin-right:auto;display:none;">Save</button>
+        <button id="partial" class="btn btn-success w-25" type="submit" style="margin-left:auto;margin-right:auto;display:none;">Save</button>
+        <button id="debt" class="btn btn-success w-25" type="submit" style="margin-left:auto;margin-right:auto;display:none;">Save</button>
+        <div id="tableContainer"></div>
+    {% elif not table_data %}
+        <div class="summary-features">
+            <button id="createTableBtn" class="btn btn-primary">Create Table</button>
+            <form action="/summary" method="post">
+                <div class="summary-row">
+                    <div class="summary-col">
+                        <select name="table-name" class="form-select w-auto" required>
+                            <option disabled selected value="" required>List of tables</option>
+                            {% for table in tables %}
+                                <option value="{{ table.table_name }}">{{ table.table_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="summary-col">
+                        <button class="btn btn-primary ml-3">View</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div id="tableContainer"></div>
+    {% endif %}
+{% endblock %}

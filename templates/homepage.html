@@ -1,0 +1,54 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Home
+{% endblock %}
+
+
+{% block main %}
+    {% if table %}
+        <h2>Welcome, {{ user }}!</h2>
+        <p>Here's an overview of your debt management tables:</p>
+        <div class="table-responsive">
+            <table class="table">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">Table Name</th>
+                        <th scope="col">Debtors</th>
+                        <th scope="col">Date</th>
+                        <th scope="col">Paid</th>
+                        <th scope="col">Unpaid</th>
+                        <th scope="col">Total</th>
+                    
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user_table in user_tables %}
+                        <tr>
+                            <td><a href="/summaryHome/{{ user_table.table_name }}" style="text-decoration:none;font-weight:bold;text-transform:capitalize;color:black;">{{ user_table.table_name }}</a></td>
+                            <td>{{ user_table.debtors }}</td>
+                            <td>{{ user_table.date }}</td>
+                            <td>{{ user_table.paid }}</td>
+                            <td>{{ user_table.unpaid }}</td>
+                            <td>{{ php(user_table.total) }}</td>
+                            <!-- <td class="no-background"><a href="/deleteTable" class="btn btn-danger">Delete</a></td> -->
+                            <td class="no-background"><button class="btn btn-danger" onclick="deleteTable('{{ user_table.table_name }}')" type="button">Delete</button></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4"></td>
+                        <th scope="row">TOTAL</td>
+                        <th scope="row">{{ php(total) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    {% elif not table %}
+        <h2>Welcome, {{ user }}!</h2>
+        <p>To start managing your debt management. You can start by creating your table as many as you want. Click the "Create Table" Button.</p>
+        <button id="createTableBtn" class="btn btn-primary w-25">Create Table</button>
+        <div id="tableContainer"></div>
+    {% endif %}
+{% endblock %}

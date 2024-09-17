@@ -1,0 +1,64 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    History
+{% endblock %}
+
+
+{% block main %}
+    <form action="/history/<debtor_id>/<name>/<table_name>" method="post" class="d-flex" style="column-gap:10px;">
+        <select id="specific_table" name="specific_table" class="form-select w-25 text-center" onchange="fetchItem()" required>
+            <option disabled value="">Debt Table Name</option>
+            {% for table_name in table_names %}
+                <option value="{{ table_name.table_name }}" {% if table_name.table_name == selected_table %}selected{% endif %}>{{ table_name.table_name }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="names_list" id="names_list" class="form-select w-25 text-center" required>
+            <option value="" disabled>Select a debtor</option>
+            {% for name in names %}
+                <option value="{{ name.name }}" {% if name.name == selected_name %}selected{% endif %} style="text-transform:capitalize;">{{ name.name }}</option>
+            {% endfor %}
+        </select>
+
+        <button class="btn btn-primary" type="submit">View</button>
+    </form>
+
+    <div class="container mt-5 table-responsive">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Gross</th>
+                    <th scope="col">Interest</th>
+                    <th scope="col">Payment</th>
+                    <th scope="col">Date</th>
+                    <th scope="col">Due Date</th>
+                    <th scope="col">Last Payment Date</th>
+                    <th scope="col">Deducted Amount</th>
+                    <th scope="col">Remaining Balance</th>
+                    <th scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for table in tables %}
+                    <tr>
+                        <td>{{ table.name }}</td>
+                        <td>{% if table.gross %}{{ php(table.gross) }}{% else %}  {% endif %}</td>
+                        <td>{% if table.interest %}{{ int(table.interest )}}%{% else %}  {% endif %}</td>
+                        <td>{% if table.payment %}{{ table.payment }}{% else %}  {% endif %}</td>
+                        <td>{{ table.date }}</td>
+                        <td>{{ table.due_date }}</td>
+                        <td>{% if table.last_payment_date %}{{ table.last_payment_date }}{% else %}  {% endif %}</td>
+                        <td style="color:red">{% if table.amount_paid %}-{{ php(table.amount_paid) }}{% else %}  {% endif %}</td>
+                        <td>{{ php(table.remaining_bal) }}</td>
+                        <td>{{ table.action }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+            </tfoot>
+        </table>
+    </div>
+
+{% endblock %}
